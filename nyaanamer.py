@@ -29,20 +29,16 @@ def only_ignore_handler(path, only="", ignore=""):
 
     return files
 
-def rename(path, regex, replacewith, **kwargs):
-    """Yields a tuple of original name and renamed name of the files filtered according to regex
+def renamed_name(path, regex, replacewith, **kwargs):
+    """Returns a list consisting tuple of original name and renamed name of the files filtered according to regex
     in a specific path provided in the argument. Keyword arguments are only and ignore which are both empty strings
     by default.
     """
     # PLAN: Add safe mode so that regex doesn't mess with extension
     gex = re.compile(regex)
     files = only_ignore_handler(path, kwargs.get('only', ""), kwargs.get('ignore', ""))
-    
-    for name in files:
-        rename = gex.sub(replacewith, name)
-        original, renamed = (os.path.join(path, name)), (os.path.join(path, rename))
-        yield original, renamed
+    original_and_renamed_name = [(x, gex.sub(replacewith, x)) for x in files]
 
-
-# for x, y in rename(r"D:\Programming\Training\test", r"\d", "LOL", only=".directory"):
-#     print(x, "---->", y)
+    return original_and_renamed_name
+        
+print(renamed_name(r"D:\Programming\Training\test", r"\d", "LOL"))
