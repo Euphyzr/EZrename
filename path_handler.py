@@ -1,9 +1,6 @@
 import os
 import sys
 
-class PathHandlerException(Exception):
-    pass
-
 class PathHandler:
     """Attributes:
     [object]
