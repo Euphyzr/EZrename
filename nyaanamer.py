@@ -9,7 +9,8 @@ def only_ignore_handler(path, only="", ignore=""):
     """
     files = os.listdir(path)
     if only:
-        only = ["."+extension for extension in re.findall(EXTENSION_REGEX, only)]
+        # re.findall() expects string or byte-like object but parser returns list. so, " ".join() is called
+        only = ["."+extension for extension in re.findall(EXTENSION_REGEX, " ".join(only))]
         if '.directory' in only:
             only.remove('.directory')   # Removing ".directory" to ensure smooth filtering of files with extensions
             directories = [f for f in files if os.path.isdir(os.path.join(path, f))]    # sorts out the directories
@@ -18,7 +19,8 @@ def only_ignore_handler(path, only="", ignore=""):
             files = [f for f in files if f.endswith(tuple(only))]
 
     elif ignore:
-        ignore = ["."+extension for extension in re.findall(EXTENSION_REGEX, ignore)]
+        # re.findall() expects string or byte-like object but parser returns list. so, " ".join() is called
+        ignore = ["."+extension for extension in re.findall(EXTENSION_REGEX, " ".join(ignore))]
         if '.directory' in ignore:
             ignore.remove('.directory') # Removing ".directory" to ensure smooth filtering of files with extensions
             directories = [f for f in files if os.path.isdir(os.path.join(path, f))]    # sorts out the directories
