@@ -22,30 +22,15 @@ class JsonConfigHandler:
         is equal or more than the imposed restriction. Callbacks must have **kwargs argument"""
         self.restriction_callbacks.append(callback)
 
-    def append_to_object_element(self, element, key, val, length_restriction=False, **kwargs):
-        """Updates the target json object with provided key and value. In case of length_restriction,
-        length's value must be provided (e.g length=5)"""
-        if length_restriction:
-            if self.is_restricted_by_length(element, kwargs['length']):
+    def append_to_object_element(self, element, key, val, length):
+        """Updates the target json object with provided key and value. In case of reaching length restriction,
+        restriction callbacks will be called"""
+        if self.is_restricted_by_length(element, length):
                 for fn in self.restriction_callbacks:
-                    fn(**kwargs)
-            else:
-                self.json_data[element][key] = val
+                    fn()
         else:
             self.json_data[element][key] = val
 
-    def append_to_array_element(self, element, val, length_restriction=False, **kwargs):
-        """Updates the target json array with provided value. In case of length_restriction,
-        length's value must be provided (e.g length=5)"""
-        if length_restriction:
-            if self.is_restricted_by_length(element, kwargs['length']):
-                for fn in self.restriction_callbacks:
-                    fn(**kwargs)
-            else:
-                self.json_data[element] + val
-        else:
-            self.json_data[element] + val
-    
     def dump(self, **kwargs):
         """Calls json.dumb() with the (modified) data and provided json file. **kwargs for
         additional json.dump() arguments"""
