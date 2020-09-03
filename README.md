@@ -31,4 +31,4 @@ Regex patterns can also be saved as presets for later uses
 ```
 Presets can be deleted. E.g `-rd/--regex-delete images`
 
-For detailed help, `"path/to/EZrename.py" --help
+For detailed help, `"path/to/EZrename.py" --help`
