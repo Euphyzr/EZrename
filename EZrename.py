@@ -67,10 +67,11 @@ if __name__ == "__main__":
         for flag in flags:
             if flag in sys.argv:
                 return False
+        return True
                     
     phandler = path_handler.PathHandler(invalid_turns=3, sys_exit=True)
     config_path = os.path.join((os.path.dirname(os.path.realpath(__file__))), "config.json")
-    j = json_config_handler.JsonConfigHandler(config_path)
+    j = json_config_handler.JsonConfigHandler(config_path, JSON_INDENT)
     
     def restriction():
         sys.exit("Cannot have more than {} presets. Remove presets with -rd/--regex-delete [name]".format(PRESETS_LIMIT))
@@ -125,7 +126,7 @@ if __name__ == "__main__":
                 print(original, "---->", renamed)
         
         j.json_data['last_changes'] = updated_last_changes
-        j.dump(indent=JSON_INDENT)
+        j.dump()
 
 
     if args.path and args.replacewith:
@@ -152,7 +153,7 @@ if __name__ == "__main__":
     if args.regex_default:
         if isinstance(args.regex_default, str):
             j.json_data['regex_default'] = args.regex_default
-            j.dump(indent=JSON_INDENT)
+            j.dump()
         else:
             print("default: {}".format(j.json_data['regex_default']))
 
@@ -161,7 +162,7 @@ if __name__ == "__main__":
             print("Name can't be 'default'")
         else:
             j.append_to_object_element('presets', args.regex_add[0], args.regex_add[1], PRESETS_LIMIT)
-            j.dump(indent=JSON_INDENT)
+            j.dump()
 
     if args.regex_delete:
         for name in args.regex_delete:
@@ -172,8 +173,7 @@ if __name__ == "__main__":
                     del j.json_data['presets'][name]
                 except KeyError:
                     print("'{}' is not in presets".format(name))
-        
-        j.dump(indent=JSON_INDENT)
+        j.dump()
 
     if args.regex_list:
         print("default: {}".format(j.json_data['regex_default']))

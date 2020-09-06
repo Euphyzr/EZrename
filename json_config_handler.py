@@ -3,9 +3,10 @@ import json
 class JsonConfigHandler:
     """Pass a valid path/to/json file
     """
-    def __init__(self, jsonfile):
+    def __init__(self, jsonfile, json_indent=None):
         self.jsonfile = jsonfile
         self.restriction_callbacks = []
+        self.json_indent = json_indent
 
         with open(jsonfile, "r") as fp:
             self.json_data = json.load(fp)
@@ -19,7 +20,7 @@ class JsonConfigHandler:
 
     def on_restriction(self, callback):
         """Allows to bind a callable that will be called when length of target json element 
-        is equal or more than the imposed restriction. Callbacks must have **kwargs argument"""
+        is equal or more than the imposed restriction."""
         self.restriction_callbacks.append(callback)
 
     def append_to_object_element(self, element, key, val, length):
@@ -35,4 +36,4 @@ class JsonConfigHandler:
         """Calls json.dumb() with the (modified) data and provided json file. **kwargs for
         additional json.dump() arguments"""
         with open(self.jsonfile, "w") as fp:
-            json.dump(self.json_data, fp, **kwargs)
+            json.dump(self.json_data, fp, indent=self.json_indent, **kwargs)
