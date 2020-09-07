@@ -79,9 +79,9 @@ if __name__ == "__main__":
 
     
     parser = argparse.ArgumentParser(description="Bulk renames files and directories with handy options.")
-    parser.add_argument('-p', '--path', help="path to files or directories", required=is_no_config_flags())
-    parser.add_argument('-w', '--replacewith', help="matched regular expression pattern are replaced by this",
-                                            required=is_no_config_flags())
+    parser.add_argument('-p', '--path', required=is_no_config_flags(), help="path to files or directories")
+    parser.add_argument('-w', '--replacewith', nargs='?', const="", required=is_no_config_flags(),
+                                            help="matched regular expression pattern are replaced by this")
     
     custom_regex = parser.add_mutually_exclusive_group()
     custom_regex.add_argument('-r', '--regex', help="matches regular expression pattern to replace it")
@@ -106,7 +106,7 @@ if __name__ == "__main__":
                                                     " name needs to be quoted. Remove default with 'default'"))
     args = parser.parse_args()
 
-    
+
     def rename(source, undo=False, quiet=args.quiet, exception_counter=1):
         updated_last_changes = {}
 
@@ -129,7 +129,7 @@ if __name__ == "__main__":
         j.dump()
 
 
-    if args.path and args.replacewith:
+    if args.path:
         path = phandler.input_validator(args.path)
         if args.regex:
             regex = args.regex
