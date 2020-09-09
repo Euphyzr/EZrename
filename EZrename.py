@@ -5,46 +5,50 @@ EXTENSION_REGEX = r"\.?(\w+)"
 
 
 def only_ignore_handler(path, only="", ignore=""):
-    """Returns a list of files and directories in a path after filtering them according to the
+    """Returns a generator of files and directories in a path after filtering them according to the
     conditions in the argument. "only" has more priority than "ignore". By default they're empty strings
     """
-    files = os.listdir(path)
-    if only:
-        # re.findall() expects string or byte-like object but parser returns list. so, " ".join() is called
-        only = ["."+extension for extension in re.findall(EXTENSION_REGEX, " ".join(only))]
-        if '.directory' in only:
-            only.remove('.directory')  # Removing ".directory" to ensure smooth filtering of files with extensions
-            directories = [f for f in files if os.path.isdir(os.path.join(path, f))]  # sorts out the directories
-            files = [f for f in files if f.endswith(tuple(only))] + directories
-        else:
-            files = [f for f in files if f.endswith(tuple(only))]
+    with os.scandir(path) as it:
+        if not only and not ignore:
+            for entry in it:
+                yield entry.name
 
-    elif ignore:
-        ignore = ["."+extension for extension in re.findall(EXTENSION_REGEX, " ".join(ignore))]
-        if '.directory' in ignore:
-            ignore.remove('.directory')
-            directories = [f for f in files if os.path.isdir(os.path.join(path, f))]
-            files = [f for f in files if not f.endswith(tuple(ignore)) and f not in directories]
-        else:
-            files = [f for f in files if not f.endswith(tuple(ignore))]
+        elif only:
+            only = ["."+extension for extension in re.findall(EXTENSION_REGEX, " ".join(only))]
+            if '.directory' not in only:
+                for entry in it:
+                    if entry.name.endswith(tuple(only)):
+                        yield entry.name
+            else:
+                only.remove('.directory')
+                for entry in it:
+                    if entry.is_dir() or entry.name.endswith(tuple(only)):
+                        yield entry.name
 
-    return files
+        elif ignore:
+            ignore = ["."+extension for extension in re.findall(EXTENSION_REGEX, " ".join(ignore))]
+            if '.directory' not in ignore:
+                for entry in it:
+                    if not entry.name.endswith(tuple(ignore)):
+                        yield entry.name
+            else:
+                ignore.remove('.directory')
+                for entry in it:
+                    if not entry.is_dir() and not entry.name.endswith(tuple(ignore)):
+                        yield entry.name
 
 
 def renamed_name(path, replacewith, regex, **kwargs):
-    """Returns a list consisting tuple of original name and renamed name of the files filtered according to regex
+    """Generator which yield tuple of original name and renamed name of the files filtered according to regex
     in a specific path provided in the argument. Keyword arguments are only and ignore which are both empty strings
     by default.
     """
     files = only_ignore_handler(path, kwargs.get('only', ""), kwargs.get('ignore', ""))
-    original_and_renamed_name = []
 
     for original_name in files:
         renamed = os.path.join(path, re.sub(regex, replacewith, original_name))
         original_name = os.path.join(path, original_name)
-        original_and_renamed_name.append((original_name, renamed))
-
-    return original_and_renamed_name
+        yield original_name, renamed
 
 
 if __name__ == "__main__":
