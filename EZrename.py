@@ -54,8 +54,8 @@ def renamed_name(path, replacewith, regex, **kwargs):
 if __name__ == "__main__":
     import sys
     import argparse
-    import path_handler
-    import json_config_handler
+    from utils.path_handler import PathHandler
+    from utils.json_config_handler import JsonConfigHandler
 
     JSON_INDENT = 4
     PRESETS_LIMIT = 5
@@ -73,9 +73,9 @@ if __name__ == "__main__":
                 return False
         return True
                     
-    phandler = path_handler.PathHandler(invalid_turns=3, sys_exit=True)
+    phandler = PathHandler(invalid_turns=3, sys_exit=True)
     config_path = os.path.join((os.path.dirname(os.path.realpath(__file__))), "config.json")
-    j = json_config_handler.JsonConfigHandler(config_path, JSON_INDENT)
+    j = JsonConfigHandler(config_path, JSON_INDENT)
     
     def restriction():
         sys.exit("Cannot have more than {} presets. Remove presets with -rd/--regex-delete [name]".format(PRESETS_LIMIT))
