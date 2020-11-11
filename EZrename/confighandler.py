@@ -30,6 +30,7 @@ class ConfigHandler:
             self.jsdata = json.load(jfp)
         self.redefault = self.jsdata.get('regex_default', None)
         self.presets = self.jsdata.get('presets', {})
+        self.history = self.jsdata.get('last_changes', {})
         
     def _is_restricted(self, element: Optional[int] = None, willadd: Optional[int] = 0) -> bool:
         """Checks if the length of an element has reached it's provided limit."""
