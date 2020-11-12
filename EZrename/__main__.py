@@ -2,6 +2,11 @@ import os
 import sys
 import argparse
 
+if __package__ == '' and not hasattr(sys, 'frozen'):
+    # in case of running without -m
+    path = os.path.realpath(__file__)
+    sys.path.insert(0, os.path.dirname(os.path.dirname(path)))
+    
 import EZrename
 from EZrename.confighandler import ConfigHandler
 from EZrename.pathhandler import PathHandler
