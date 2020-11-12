@@ -28,7 +28,6 @@ class ConfigHandler:
 
         with open(jsonfile, 'r') as jfp:
             self.jsdata = json.load(jfp)
-        self.redefault = self.jsdata.get('regex_default', None)
         self.presets = self.jsdata.get('presets', {})
         self.history = self.jsdata.get('last_changes', {})
         
@@ -37,7 +36,7 @@ class ConfigHandler:
         if self.limit is None:
             return False
         element = element or len(self.presets)
-        return element + willadd >= self.limit
+        return element + willadd > self.limit
 
     def on_restriction(self, callback: Callable) -> None:
         """Bind a callable to be called on length restriction of an element."""
