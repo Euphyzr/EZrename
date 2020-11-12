@@ -6,14 +6,20 @@ import EZrename
 from EZrename.confighandler import ConfigHandler
 from EZrename.pathhandler import PathHandler
 
+
 def renaming(parser, args):
+    """The function behind the {rename} subparser."""
+
+    # we only want the extension part without the dot(.)
     get_ext = lambda en: os.path.splitext(en)[1][1:]
 
     predicates = []
     if args.directory:
         if args.only:
+            # --directory with --only includes directories
             predicates.append(lambda e: e.is_dir() or get_ext(e.name) in args.only)
         elif args.ignore:
+            # --directory with --ignore ignores directories
             predicates.append(lambda e: not e.is_dir() and not get_ext(e.name) in args.ignore)
         else:
             predicates.append(lambda e: e.is_dir())
@@ -23,8 +29,6 @@ def renaming(parser, args):
         if args.only:
             predicates.append(lambda e: get_ext(e.name) in args.only)
 
-    # config_path = os.path.join(os.path.dirname(__file__), 'config.json')
-    # j = ConfigHandler(config_path, limit=5)
     j = args.confighandler
     phandler = PathHandler(invalids=3, sys_exit=True)
     renamer = EZrename.EzRenamer(args.path, phandler)
@@ -56,8 +60,10 @@ def renaming(parser, args):
     j.history[renamer.path] = history
     j.dump()
 
+
 def renamingparser(subparsers):
-    """Subparser that deals with renaming."""
+    """The rename subparser setup."""
+
     parser = subparsers.add_parser('rename', help="bulk renaming.")
     parser.set_defaults(func=renaming)
 
@@ -80,7 +86,10 @@ def renamingparser(subparsers):
     parser.add_argument('-u', '--undo', action='store_true', help="Undos the previous batch of rename.")
     parser.add_argument('-q', '--quiet', action='store_true', help="Doesn't display the changes.")
 
+
 def configuring(parser, args):
+    """The function behind {config} subparser."""
+
     j = args.confighandler
 
     def restrict():
@@ -88,6 +97,8 @@ def configuring(parser, args):
     j.on_restriction(restrict)
 
     if args.default_preset:
+        # we want to print the current default
+        # if no argument was provided
         if isinstance(args.default_preset, str):
             j.jsdata['regex_default'] = args.default_preset
             j.dump()
@@ -97,6 +108,9 @@ def configuring(parser, args):
     elif args.preset_add:
         pres_name, pres_pattern = args.preset_add
         if pres_name == 'default':
+            # because, we don't want to mixup between
+            # the default preset and the preset named default
+            # when deleting the preset
             parser.error("Preset name can't be 'default'")
         else:
             j.presupdate({pres_name: pres_pattern})
@@ -122,10 +136,11 @@ def configuring(parser, args):
     
     else:
         parser.error("test")  
-            
+
 
 def configparser(subparsers):
-    """Subparser that deals with configuration."""
+    """The config subparser setup."""
+
     parser = subparsers.add_parser('config', help="Configuring the presets.")
     parser.set_defaults(func=configuring)
     parser.add_argument('-dp', '--default-preset', nargs='?', const=True,
@@ -137,7 +152,10 @@ def configparser(subparsers):
                         help="Deletes one/multiple presets by it's name. Multi-worded names are to be quoted." \
                             " Remove the default preset by 'default'.")
 
+
 def parserdefault(parser, args):
+    """The function behind default parser."""
+
     if args.version:
         print(f"{EZrename.__title__} v{EZrename.__version__}")
     elif args.license:
@@ -145,7 +163,10 @@ def parserdefault(parser, args):
     else:
         parser.print_help()
 
+
 def setparser():
+    """The default parser setup."""
+
     parser = argparse.ArgumentParser(
         prog=EZrename.__title__, description="Bulk renames files and directories with handy options."
     )
@@ -158,6 +179,7 @@ def setparser():
     configparser(subparsers)
 
     return parser, parser.parse_args()
+
 
 def main():
     parser, args = setparser()
