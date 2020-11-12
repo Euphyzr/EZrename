@@ -187,8 +187,8 @@ def parserdefault(parser, args):
 
     if args.version:
         print(f"{EZrename.__title__} v{EZrename.__version__}")
-    elif args.license:
-        print(EZrename.__license__)
+    elif args.about:
+        print(EZrename.__title__, EZrename.__version__)
     else:
         parser.print_help()
 
@@ -200,7 +200,7 @@ def setparser():
         prog=EZrename.__title__, description="Bulk renames files and directories with handy options."
     )
     parser.add_argument('-v', '--version', action='store_true', help="Shows the version.")
-    parser.add_argument('-l', '--license', required=False, action='store_true', help="Shows the license.")
+    parser.add_argument('-a', '--about', required=False, action='store_true', help="About this.")
     parser.set_defaults(func=parserdefault)
 
     subparsers = parser.add_subparsers()
@@ -216,4 +216,5 @@ def main():
     args.confighandler = ConfigHandler(config_path, limit=5)
     args.func(parser, args)
 
-main()
+if __name__ == "__main__":
+    main()
