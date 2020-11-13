@@ -50,6 +50,10 @@ def renaming(parser, args):
         elif args.ignore:
             # --directory with --ignore ignores directories
             predicates.append(lambda e: not e.is_dir() and not get_ext(e.name) in args.ignore)
+        elif not args.ignore and type(args.ignore) == list:
+            # calling -i without any args gives an empty list
+            # using this behaviour to only ignore directories
+            predicates.append(lambda e: not e.is_dir())
         else:
             predicates.append(lambda e: e.is_dir())
     else:
