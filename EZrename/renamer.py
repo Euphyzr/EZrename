@@ -31,25 +31,56 @@ class EzRenamer:
 
     Attributes
     ----------
-    path : str
-        Path of the target directory.
     phandler : PathHandler
         A path handler object.
+    args : argparse.Namespace
+        A namespace object containing path and the predicates for 
+        filtering files.
     """
 
-    def __init__(self, path, phandler):
+    def __init__(self, phandler, args):
         self.phandler = phandler
-        self.path = self.phandler.input_validate(path)
+        self._args = args
+        self.path = self.phandler.input_validate(self._args.path)
+
+    @property
+    def _predicates(self):
+        get_ext = lambda en: os.path.splitext(en)[1][1:]
+        predicates, args = [], self._args
+
+        if args.directory:
+            if args.only:
+                # --directory with --only includes directories
+                predicates.append(lambda e: e.is_dir() or get_ext(e.name) in args.only)
+            elif args.ignore:
+                # --directory with --ignore ignores directories
+                predicates.append(lambda e: not e.is_dir() and not get_ext(e.name) in args.ignore)
+            elif not args.ignore and type(args.ignore) == list:
+                # calling -i without any args gives an empty list
+                # using this behaviour to only ignore directories
+                predicates.append(lambda e: not e.is_dir())
+            else:
+                predicates.append(lambda e: e.is_dir())
+        else:
+            if args.ignore:
+                predicates.append(lambda e: not get_ext(e.name) in args.ignore)
+            if args.only:
+                predicates.append(lambda e: get_ext(e.name) in args.only)
+
+        return predicates
 
     def filter_files(self, predicates: Optional[Union[list, tuple]] = None) -> Iterator[str]:
-        predicates = predicates or [lambda e: True]
+        if predicates is None:
+            predicates = self._predicates or [lambda e: True]
         with os.scandir(self.path) as it:
             for entry in it:
                 if all(p(entry) for p in predicates):
                     yield entry.name
 
-    def renamed_names(self, files: str, regex: str, replacewith: str) -> Iterator[Tuple[str, str]]:
+    def renamed_names(self, regex: str, replacewith: str, files: Iterator[str] = None) -> Iterator[Tuple[str, str]]:
         """A generator that yields a tuple of original path and renamed path of the file."""
+        if files is None:
+            files = self.filter_files()
         for originalnames in files:
             renamed = os.path.join(self.path, re.sub(regex, replacewith, originalnames))
             originalnames = os.path.join(self.path, originalnames)
@@ -58,6 +89,7 @@ class EzRenamer:
     def rename(self, source: Tuple[str, str], undo: bool = False, quiet: bool = False) -> dict:
         """Renames and returns a dictionary with original, renamed pairs."""
         exception_count, history = 1, {}
+
         for original, renamed in source:
             original, renamed = (renamed, original) if undo else (original, renamed)
             try:
@@ -68,6 +100,6 @@ class EzRenamer:
                 exception_count += 1
             if not quiet:
                 print(original, '------>', renamed)
-
             history[original] = renamed
+
         return history

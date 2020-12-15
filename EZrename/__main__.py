@@ -39,32 +39,9 @@ from EZrename.pathhandler import PathHandler
 def renaming(parser, args):
     """The function behind the {rename} subparser."""
 
-    # we only want the extension part without the dot(.)
-    get_ext = lambda en: os.path.splitext(en)[1][1:]
-
-    predicates = []
-    if args.directory:
-        if args.only:
-            # --directory with --only includes directories
-            predicates.append(lambda e: e.is_dir() or get_ext(e.name) in args.only)
-        elif args.ignore:
-            # --directory with --ignore ignores directories
-            predicates.append(lambda e: not e.is_dir() and not get_ext(e.name) in args.ignore)
-        elif not args.ignore and type(args.ignore) == list:
-            # calling -i without any args gives an empty list
-            # using this behaviour to only ignore directories
-            predicates.append(lambda e: not e.is_dir())
-        else:
-            predicates.append(lambda e: e.is_dir())
-    else:
-        if args.ignore:
-            predicates.append(lambda e: not get_ext(e.name) in args.ignore)
-        if args.only:
-            predicates.append(lambda e: get_ext(e.name) in args.only)
-
     j = args.confighandler
     phandler = PathHandler(invalids=3, sys_exit=True)
-    renamer = EZrename.EzRenamer(args.path, phandler)
+    renamer = EZrename.EzRenamer(phandler, args)
 
     if args.undo:
         try:
@@ -86,8 +63,7 @@ def renaming(parser, args):
                 "No default regex is setted up. Use -d/--default <regex pattern> to setup a default pattern. " \
                 "Alternatively, use -r/--regex or -pr/--preset-regex."
             )
-        filtered = renamer.filter_files(predicates)
-        source = renamer.renamed_names(filtered, regex, args.replacewith)
+        source = renamer.renamed_names(regex, args.replacewith)
 
     history = renamer.rename(source, args.undo, args.quiet)
     j.history[renamer.path] = history
