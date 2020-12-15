@@ -44,25 +44,9 @@ def renaming(parser, args):
     renamer = EZrename.EzRenamer(phandler, args)
 
     if args.undo:
-        try:
-            source = j.history[renamer.path].items()
-        except KeyError:
-            parser.error(f"No rename history for this directory.")
+        source = j.get_history(renamer.path, parser.error)
     else:
-        if args.regex:
-            regex = args.regex
-        elif args.preset_regex:
-            try:
-                regex = j.presets[args.preset_regex]
-            except KeyError:
-                parser.error("No preset exists by that name. -pl/--preset-limit gives a list of all presets.")
-        elif j.jsdata['regex_default']:
-            regex = j.jsdata['regex_default']
-        else:
-            parser.error(
-                "No default regex is setted up. Use -d/--default <regex pattern> to setup a default pattern. " \
-                "Alternatively, use -r/--regex or -pr/--preset-regex."
-            )
+        regex = j.get_regex(args, parser.error)
         source = renamer.renamed_names(regex, args.replacewith)
 
     history = renamer.rename(source, args.undo, args.quiet)
@@ -142,9 +126,6 @@ def configuring(parser, args):
                 except KeyError:
                     print(f"'{name}' is not in the presets.")
         j.dump()
-    
-    else:
-        parser.error("test")  
 
 
 def configparser(subparsers):

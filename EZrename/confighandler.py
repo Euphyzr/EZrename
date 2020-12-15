@@ -22,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+import sys
 import json
 from typing import Optional, Callable
 
@@ -80,3 +81,32 @@ class ConfigHandler:
         """Dump the datas to the json file."""
         with open(self.jsonfile, 'w') as jfp:
             json.dump(self.jsdata, jfp, indent=self.indent, **kwargs)
+
+    def get_regex(self, args, errorer: Callable = sys.exit) -> str:
+        """Based on the args namespace, return a regex."""
+        default = self.jsdata['regex_default']
+
+        if args.regex:
+            regex = args.regex
+        elif args.preset_regex:
+            try:
+                regex = self.presets[args.preset_regex]
+            except KeyError:
+                errorer("No preset exists by that name.")
+        elif default:
+            regex = default
+        else:
+            errorer("No default regex is setted up. "
+                    "Consider setting up one or provide a regex or a valid preset.")
+
+        return regex
+
+    def get_history(self, path, errorer: Callable = sys.exit) -> dict:
+        """Returns rename history for the provided path."""
+        try:
+            history = self.history[path].items()
+        except KeyError:
+            errorer("No rename history for this directory.")
+
+        return history
+        
