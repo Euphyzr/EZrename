@@ -24,54 +24,70 @@ SOFTWARE.
 
 import os
 import re
-from typing import Optional, Union, Iterator, Tuple
+from typing import Optional, Union, Iterator, Tuple, Sequence
 
 class EzRenamer:
     """A class that handles filtering and renaming the files.
 
     Attributes
     ----------
+    path : str
+        Path of the target directory.
     phandler : PathHandler
         A path handler object.
-    args : argparse.Namespace
-        A namespace object containing path and the predicates for 
-        filtering files.
     """
 
-    def __init__(self, phandler, args):
+    def __init__(self, path, phandler):
         self.phandler = phandler
-        self._args = args
-        self.path = self.phandler.input_validate(self._args.path)
+        self.path = self.phandler.input_validate(path)
+        self._predicates = [lambda e: True]
 
-    @property
-    def _predicates(self):
+    def add_predicates(self, **kwargs) -> None:
+        """Add predicates to filter the files with.
+        
+        Kwargs
+        ------
+        ignore : Sequence
+            Ignores file extension in this sequence.
+        only : Sequence
+            Only accepts file extensions in this sequence.
+        directoy : bool
+            Calling with ignore, ignores the extensions and directories. If no extension
+            is provided then only ignore directories. Calling with only filters only directories
+            and those extensions.
+        """
+
         get_ext = lambda en: os.path.splitext(en)[1][1:]
-        predicates, args = [], self._args
+        predicates = []
 
-        if args.directory:
-            if args.only:
+        only = kwargs.pop('only')
+        ignore = kwargs.pop('ignore')
+        directory = kwargs.pop('directory')
+
+        if directory:
+            if only:
                 # --directory with --only includes directories
-                predicates.append(lambda e: e.is_dir() or get_ext(e.name) in args.only)
-            elif args.ignore:
+                predicates.append(lambda e: e.is_dir() or get_ext(e.name) in only)
+            elif ignore:
                 # --directory with --ignore ignores directories
-                predicates.append(lambda e: not e.is_dir() and not get_ext(e.name) in args.ignore)
-            elif not args.ignore and type(args.ignore) == list:
-                # calling -i without any args gives an empty list
-                # using this behaviour to only ignore directories
+                predicates.append(lambda e: not e.is_dir() and not get_ext(e.name) in ignore)
+            elif not ignore and type(ignore) == list:
+                # calling -i without any args gives an empty list use this behaviour to ignore directories
                 predicates.append(lambda e: not e.is_dir())
             else:
                 predicates.append(lambda e: e.is_dir())
         else:
-            if args.ignore:
-                predicates.append(lambda e: not get_ext(e.name) in args.ignore)
-            if args.only:
-                predicates.append(lambda e: get_ext(e.name) in args.only)
+            if ignore:
+                predicates.append(lambda e: not get_ext(e.name) in ignore)
+            if only:
+                predicates.append(lambda e: get_ext(e.name) in only)
 
-        return predicates
+        self._predicates = predicates if predicates else self._predicates
 
     def filter_files(self, predicates: Optional[Union[list, tuple]] = None) -> Iterator[str]:
         if predicates is None:
-            predicates = self._predicates or [lambda e: True]
+            predicates = self._predicates
+
         with os.scandir(self.path) as it:
             for entry in it:
                 if all(p(entry) for p in predicates):

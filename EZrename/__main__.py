@@ -41,7 +41,10 @@ def renaming(parser, args):
 
     j = args.confighandler
     phandler = PathHandler(invalids=3, sys_exit=True)
-    renamer = EZrename.EzRenamer(phandler, args)
+    renamer = EZrename.EzRenamer(args.path, phandler)
+    renamer.add_predicates(only=args.only,
+                           ignore=args.ignore,
+                           directory=args.directory)
 
     if args.undo:
         source = j.get_history(renamer.path, parser.error)
@@ -90,8 +93,7 @@ def configuring(parser, args):
     j.on_restriction(restrict)
 
     if args.default_preset:
-        # we want to print the current default
-        # if no argument was provided
+        # we want to print the current default if no argument was provided
         if isinstance(args.default_preset, str):
             j.jsdata['regex_default'] = args.default_preset
             j.dump()
@@ -101,9 +103,8 @@ def configuring(parser, args):
     elif args.preset_add:
         pres_name, pres_pattern = args.preset_add
         if pres_name == 'default':
-            # because, we don't want to mixup between
-            # the default preset and the preset named default
-            # when deleting the preset
+            # we don't want to mixup between the default preset and 
+            # the preset named default when deleting the preset
             parser.error("Preset name can't be 'default'")
         else:
             j.presupdate({pres_name: pres_pattern})
