@@ -49,7 +49,7 @@ def renaming(parser, args):
     if args.undo:
         source = j.get_history(renamer.path, parser.error)
     else:
-        regex = j.get_regex(args, parser.error)
+        regex = j.get_regex(parser.error, regex=args.regex, preset_regex=args.preset_regex)
         source = renamer.renamed_names(regex, args.replacewith)
 
     history = renamer.rename(source, args.undo, args.quiet)

@@ -82,15 +82,25 @@ class ConfigHandler:
         with open(self.jsonfile, 'w') as jfp:
             json.dump(self.jsdata, jfp, indent=self.indent, **kwargs)
 
-    def get_regex(self, args, errorer: Callable = sys.exit) -> str:
-        """Based on the args namespace, return a regex."""
+    def get_regex(self, errorer: Callable = sys.exit, **kwargs) -> str:
+        """Based on the keyword arguments, return a regex.
+        
+        Kwargs
+        ------
+        regex : str
+            If this is provided this will be used.
+        preset_regex : str
+            If this is provided, preset by this name will be searched.
+        """
         default = self.jsdata['regex_default']
+        preset_regex = kwargs.pop('preset_regex')
+        provided_regex = kwargs.pop('regex')
 
-        if args.regex:
-            regex = args.regex
-        elif args.preset_regex:
+        if provided_regex:
+            regex = provided_regex
+        elif preset_regex:
             try:
-                regex = self.presets[args.preset_regex]
+                regex = self.presets[preset_regex]
             except KeyError:
                 errorer("No preset exists by that name.")
         elif default:
