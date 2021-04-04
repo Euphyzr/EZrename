@@ -24,10 +24,9 @@ SOFTWARE.
 
 import os
 import sys
-from typing import Optional
 
 class PathHandler:
-    """A class to handle path inputs.
+    """A helper class for path input validation.
     
     Attributes
     ----------
@@ -55,7 +54,7 @@ class PathHandler:
         self.on_samepath = kwargs.get('on_samepath', "Source and destination can't be same. Re-enter: ")
         self.sys_exit = kwargs.get('sys_exit', False)
 
-    def input_validate(self, path: str) -> Optional[str]:
+    def input_validate(self, path):
         """Returns a path after checking if it exists."""
         for turn in range(self.invalids + 1):
             # the (+ 1) in range and break if turn == self.invalids 
@@ -70,7 +69,7 @@ class PathHandler:
         if self.sys_exit:
             sys.exit()
 
-    def samepath_validate(self, src: str, dst: str) -> Optional[str]:
+    def samepath_validate(self, src, dst):
         """Returns destination path if it's not same as src."""
         for turn in range(self.sames + 1):
             try:

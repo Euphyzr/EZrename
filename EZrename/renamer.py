@@ -24,98 +24,56 @@ SOFTWARE.
 
 import os
 import re
-from typing import Optional, Union, Iterator, Tuple, Sequence
 
-class EzRenamer:
-    """A class that handles filtering and renaming the files.
-
-    Attributes
-    ----------
-    path : str
-        Path of the target directory.
-    phandler : PathHandler
-        A path handler object.
-    """
-
-    def __init__(self, path, phandler):
-        self.phandler = phandler
-        self.path = self.phandler.input_validate(path)
-        self._predicates = [lambda e: True]
-
-    def add_predicates(self, **kwargs) -> None:
-        """Add predicates to filter the files with.
-        
-        Kwargs
-        ------
-        ignore : Sequence
-            Ignores file extension in this sequence.
-        only : Sequence
-            Only accepts file extensions in this sequence.
-        directoy : bool
-            Calling with ignore, ignores the extensions and directories. If no extension
-            is provided then only ignore directories. Calling with only filters only directories
-            and those extensions.
-        """
-
-        get_ext = lambda en: os.path.splitext(en)[1][1:]
-        predicates = []
-
-        only = kwargs.pop('only')
-        ignore = kwargs.pop('ignore')
-        directory = kwargs.pop('directory')
-
-        if directory:
-            if only:
-                # --directory with --only includes directories
-                predicates.append(lambda e: e.is_dir() or get_ext(e.name) in only)
-            elif ignore:
-                # --directory with --ignore ignores directories
-                predicates.append(lambda e: not e.is_dir() and not get_ext(e.name) in ignore)
-            elif not ignore and type(ignore) == list:
-                # calling -i without any args gives an empty list use this behaviour to ignore directories
-                predicates.append(lambda e: not e.is_dir())
-            else:
-                predicates.append(lambda e: e.is_dir())
-        else:
-            if ignore:
-                predicates.append(lambda e: not get_ext(e.name) in ignore)
-            if only:
-                predicates.append(lambda e: get_ext(e.name) in only)
-
-        self._predicates = predicates if predicates else self._predicates
-
-    def filter_files(self, predicates: Optional[Union[list, tuple]] = None) -> Iterator[str]:
-        if predicates is None:
-            predicates = self._predicates
-
-        with os.scandir(self.path) as it:
-            for entry in it:
+def get_files(path, predicates=None):
+    """Filters and yields os.DirEntry according to provided predicates, after yielding the path."""
+    with os.scandir(path) as it:
+        for entry in it:
+            if predicates:
                 if all(p(entry) for p in predicates):
-                    yield entry.name
+                    yield entry
+            else:
+                yield entry
 
-    def renamed_names(self, regex: str, replacewith: str, files: Iterator[str] = None) -> Iterator[Tuple[str, str]]:
-        """A generator that yields a tuple of original path and renamed path of the file."""
-        if files is None:
-            files = self.filter_files()
-        for originalnames in files:
-            renamed = os.path.join(self.path, re.sub(regex, replacewith, originalnames))
-            originalnames = os.path.join(self.path, originalnames)
-            yield originalnames, renamed
+def renamed_files(path, files, regex, replace_with):
+    """Yields full path of original and renamed name of files, based on regex and replace_with."""
+    pattern  = re.compile(regex)
+    for entry in files:
+        # we only want to change the file name not the whole path, so use os.path.join
+        new_name = os.path.join(path, pattern.sub(replace_with, entry.name))
+        original = entry.path
+        yield original, new_name
 
-    def rename(self, source: Tuple[str, str], undo: bool = False, quiet: bool = False) -> dict:
-        """Renames and returns a dictionary with original, renamed pairs."""
-        exception_count, history = 1, {}
+def rename(
+    source,
+    on_rename=lambda original, new_name: print(original, '->', new_name),
+    on_permission_error=lambda err: print(f"{err}\nSkipping...\n")
+):
+    """Renames based on source, which is an sequence of tuple of original and to be renamed path. Return
+    a dictionary of (new_name: old_name) key, value pair.
 
-        for original, renamed in source:
-            original, renamed = (renamed, original) if undo else (original, renamed)
-            try:
-                os.rename(original, renamed)
-            except FileExistsError:
-                renamed = f"{renamed} ({exception_count})"
-                os.rename(original, renamed)
-                exception_count += 1
-            if not quiet:
-                print(original, '------>', renamed)
-            history[original] = renamed
+    source : Sequence[Tuple[str, str]]
+        Rename all files in the source from their original name to new_name
+    on_rename : function [Optional]
+        A function to be called after each rename. Takes original and to-be renamed path as an input.
+    on_permission_error : function [Optional]
+        A function to be called on PermissionError. Takes error as the input.
+    """
+    same_name_count = 1
+    history = {}
 
-        return history
+    for original, new_name in source:
+        try:
+            os.rename(original, new_name)
+        except PermissionError as perm_err:
+            on_permission_error(perm_err)
+            continue
+        except FileExistsError:
+            new_name = f'{new_name} ({same_name_count})'
+            os.rename(original, new_name)
+            same_name_count += 1
+
+        history[new_name] = original
+        on_rename(original, new_name)
+
+    return history

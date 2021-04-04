@@ -32,29 +32,69 @@ if __package__ == '' and not hasattr(sys, 'frozen'):
     sys.path.insert(0, os.path.dirname(os.path.dirname(path)))
     
 import EZrename
-from EZrename.confighandler import ConfigHandler
-from EZrename.pathhandler import PathHandler
+
+def get_predicates(**flags):
+    """Returns a list of predicates to be applied for get_file.
+    
+    kwargs
+    ------
+    ignore : Sequence
+        Ignores file extension in this sequence.
+    only : Sequence
+        Only accepts file extensions in this sequence.
+    directoy : bool
+        Calling with ignore, ignores the extensions and directories. If no extension
+        is provided then only ignore directories. Calling with only filters only directories
+        and those extensions.
+    """
+    get_ext = lambda filename: os.path.splitext(filename)[1][1:]
+    predicates = []
+
+    only = flags.get('only')
+    ignore = flags.get('ignore')
+    directory = flags.get('directory')
+
+    if directory:
+        if only:
+            # directory with only includes directories
+            predicates.append(lambda e: e.is_dir() or get_ext(e.name) in only)
+        elif ignore:
+            # directory with ignore ignores directories as well as the given extensions
+            predicates.append(lambda e: not e.is_dir() and not get_ext(e.name) in ignore)
+        elif not ignore and type(ignore) == list:
+            # calling -i without any args gives an empty list use this behaviour to ignore directories only
+            predicates.append(lambda e: not e.is_dir())
+        else:
+            predicates.append(lambda e: e.is_dir())
+    else:
+        if ignore:
+            predicates.append(lambda e: not get_ext(e.name) in ignore)
+        if only:
+            predicates.append(lambda e: get_ext(e.name) in only)
+
+    return predicates
 
 
 def renaming(parser, args):
     """The function behind the {rename} subparser."""
 
-    j = args.confighandler
-    phandler = PathHandler(invalids=3, sys_exit=True)
-    renamer = EZrename.EzRenamer(args.path, phandler)
-    renamer.add_predicates(only=args.only,
-                           ignore=args.ignore,
-                           directory=args.directory)
+    conf = args.confighandler
+    phandler = EZrename.utils.PathHandler(invalids=3, sys_exit=True)
+    path = phandler.input_validate(args.path)
+    predicates = get_predicates(only=args.only, ignore=args.ignore, directory=args.directory)
 
     if args.undo:
-        source = j.get_history(renamer.path, parser.error)
+        source = conf.get_history(path)
     else:
-        regex = j.get_regex(parser.error, regex=args.regex, preset_regex=args.preset_regex)
-        source = renamer.renamed_names(regex, args.replacewith)
+        regex = conf.get_regex(regex=args.regex, preset_regex=args.preset_regex)
+        source = EZrename.renamed_files(path, EZrename.get_files(path, predicates), regex, args.replacewith)
+    if args.quiet:
+        on_rename_callback = lambda original, new_name: None
+        conf.history[path] = EZrename.rename(source, on_rename=on_rename_callback)
+    else:
+        conf.history[path] = EZrename.rename(source)
 
-    history = renamer.rename(source, args.undo, args.quiet)
-    j.history[renamer.path] = history
-    j.dump()
+    conf.dump()
 
 
 def renamingparser(subparsers):
@@ -86,19 +126,16 @@ def renamingparser(subparsers):
 def configuring(parser, args):
     """The function behind {config} subparser."""
 
-    j = args.confighandler
-
-    def restrict():
-        sys.exit(f"Cannot have more than {j.limit} presets. Remove presets with -pd/--preset-delete <name>.")
-    j.on_restriction(restrict)
+    conf = args.confighandler
+    conf.restriction_msg = f"Cannot have more than {conf.limit} presets. Remove presets with -pd/--preset-delete <name>."
 
     if args.default_preset:
         # we want to print the current default if no argument was provided
         if isinstance(args.default_preset, str):
-            j.jsdata['regex_default'] = args.default_preset
-            j.dump()
+            conf.jsdata['regex_default'] = args.default_preset
+            conf.dump()
         else:
-            print(f"Default: {j.jsdata['regex_default']}")
+            print(f"Default: {conf.jsdata['regex_default']}")
 
     elif args.preset_add:
         pres_name, pres_pattern = args.preset_add
@@ -107,26 +144,26 @@ def configuring(parser, args):
             # the preset named default when deleting the preset
             parser.error("Preset name can't be 'default'")
         else:
-            j.presupdate({pres_name: pres_pattern})
-            j.dump()
+            conf.update_preset({pres_name: pres_pattern})
+            conf.dump()
 
     elif args.preset_list:
-        default = j.jsdata['regex_default']
+        default = conf.jsdata['regex_default']
         if default:
             print(f"default: {default}")
-        for name, pattern in j.presets.items():
+        for name, pattern in conf.presets.items():
             print(f"{name}: {pattern}")
 
     elif args.preset_delete:
         for name in args.preset_delete:
             if name == 'default':
-                j.jsdata['regex_default'] = ""
+                conf.jsdata['regex_default'] = ""
             else:
                 try:
-                    del j.presets[name]
+                    del conf.presets[name]
                 except KeyError:
                     print(f"'{name}' is not in the presets.")
-        j.dump()
+        conf.dump()
 
 
 def configparser(subparsers):
@@ -147,10 +184,8 @@ def configparser(subparsers):
 def parserdefault(parser, args):
     """The function behind default parser."""
 
-    if args.version:
+    if args.version or args.about:
         print(f"{EZrename.__title__} v{EZrename.__version__}")
-    elif args.about:
-        print(EZrename.__title__, EZrename.__version__)
     else:
         parser.print_help()
 
@@ -175,7 +210,7 @@ def setparser():
 def main():
     parser, args = setparser()
     config_path = os.path.join(os.path.dirname(__file__), 'config.json')
-    args.confighandler = ConfigHandler(config_path, limit=5)
+    args.confighandler = EZrename.utils.ConfigHandler(config_path, limit=5, errorer=parser.error)
     args.func(parser, args)
 
 if __name__ == "__main__":

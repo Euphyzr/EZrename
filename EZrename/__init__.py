@@ -22,17 +22,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-from .renamer import EzRenamer
-from . import confighandler
-from . import pathhandler
-
-__all__ = (
-    'EzRenamer',
-    'confighandler',
-    'pathhandler'
+from .renamer import (
+    get_files,
+    renamed_files,
+    rename
 )
+from . import utils
 
 __title__ = 'EZrename'
-__version__ = '0.4.0'
+__version__ = '0.5.0'
 __license__ = 'MIT'
-__author__ = 'euphonicazure'
+__author__ = 'Euphyzr'

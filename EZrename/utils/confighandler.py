@@ -24,10 +24,9 @@ SOFTWARE.
 
 import sys
 import json
-from typing import Optional, Callable
 
 class ConfigHandler:
-    """A class to handle EZrename configuration.
+    """A helper class for EZrename command-line tool configuration.
     
     Attributes
     ----------
@@ -35,13 +34,13 @@ class ConfigHandler:
         The path to configuration json file. 
     indent : int, optional
         Indent when dumping json.
+    errorer : function, option
+        Function called for errors. sys.exit by default.
     limit : int, optional
         Maximum number of presets.
-    jsdata : dict
+    jsdata : dict, attribute
         The entire json data.
-    redefault : str, optional
-        The default regex pattern.
-    presets : dict, optional
+    presets : dict, attribute
         The presets dictionary
     """
 
@@ -49,40 +48,27 @@ class ConfigHandler:
         self.indent = kwargs.pop('indent', 4)
         self.limit = kwargs.pop('limit', None)
         self.jsonfile = jsonfile
-        self._callbacks = []  # they're called on restriction
+        self.errorer = kwargs.pop('errorer', sys.exit)
+        self.restriction_msg = kwargs.get('restriction_msg', f"Max {self.limit} presets allowed.")
 
         with open(jsonfile, 'r') as jfp:
             self.jsdata = json.load(jfp)
         self.presets = self.jsdata.get('presets', {})
         self.history = self.jsdata.get('last_changes', {})
-        
-    def _is_restricted(self, element: Optional[int] = None, willadd: Optional[int] = 0) -> bool:
-        """Checks if the length of an element has reached it's provided limit."""
-        if self.limit is None:
-            return False
-        element = element or len(self.presets)
-        return element + willadd > self.limit
 
-    def on_restriction(self, callback: Callable) -> None:
-        """Bind a callable to be called on length restriction of an element."""
-        self._callbacks.append(callback)
-
-    def presupdate(self, new: dict) -> None:
-        """Updates preset after checking limit."""
-        if self._is_restricted(len(self.presets), len(new)):
-            if self._callbacks:
-                for callback in self._callbacks:
-                    callback()
-                return
-            raise ValueError(f"Maximum number of preset is {self.limit}.")
+    def update_preset(self, new):
+        if self.limit and (len(self.presets) + len(new) > self.limit):
+            self.errorer(self.restriction_msg)
+            return
         self.presets.update(new)
-    
-    def dump(self, **kwargs) -> None:
+
+    def dump(self, **kwargs):
         """Dump the datas to the json file."""
         with open(self.jsonfile, 'w') as jfp:
             json.dump(self.jsdata, jfp, indent=self.indent, **kwargs)
 
-    def get_regex(self, errorer: Callable = sys.exit, **kwargs) -> str:
+    
+    def get_regex(self, regex=None, preset_regex=None):
         """Based on the keyword arguments, return a regex.
         
         Kwargs
@@ -93,30 +79,28 @@ class ConfigHandler:
             If this is provided, preset by this name will be searched.
         """
         default = self.jsdata['regex_default']
-        preset_regex = kwargs.pop('preset_regex')
-        provided_regex = kwargs.pop('regex')
 
-        if provided_regex:
-            regex = provided_regex
+        if regex:
+            result = regex
         elif preset_regex:
             try:
-                regex = self.presets[preset_regex]
+                result = self.presets[preset_regex]
             except KeyError:
-                errorer("No preset exists by that name.")
+                self.errorer("No preset exists by that name.")
         elif default:
-            regex = default
+            result = default
         else:
-            errorer("No default regex is setted up. "
-                    "Consider setting up one or provide a regex or a valid preset.")
+            self.errorer(
+                "No default regex is setted up. Consider setting up one or provide a regex or a valid preset."
+            )
 
-        return regex
-
-    def get_history(self, path, errorer: Callable = sys.exit) -> dict:
+        return result
+    
+    def get_history(self, path):
         """Returns rename history for the provided path."""
         try:
             history = self.history[path].items()
-        except KeyError:
-            errorer("No rename history for this directory.")
+        except KeyError as e:
+            self.errorer(f"No rename history for {e}.")
 
         return history
-        
