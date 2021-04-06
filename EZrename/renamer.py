@@ -69,7 +69,8 @@ def rename(
             on_permission_error(perm_err)
             continue
         except FileExistsError:
-            new_name = f'{new_name} ({same_name_count})'
+            name, ext = os.path.splitext(new_name)
+            new_name = f'{name} ({same_name_count}){ext}'
             os.rename(original, new_name)
             same_name_count += 1
 
